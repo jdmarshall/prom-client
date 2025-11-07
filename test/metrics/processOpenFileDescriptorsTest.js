@@ -2,6 +2,14 @@
 
 const Registry = require('../../index').Registry;
 
+function onLinux(...args) {
+	if (process.platform === 'linux') {
+		return it(...args);
+	} else {
+		return it.skip(...args);
+	}
+}
+
 jest.mock(
 	'process',
 	() => Object.assign({}, jest.requireActual('process'), { platform: 'linux' }), // This metric only works on Linux
@@ -26,7 +34,7 @@ describe.each([
 		register.clear();
 	});
 
-	it(`should add metric to the ${tag} registry`, async () => {
+	onLinux(`should add metric to the ${tag} registry`, async () => {
 		expect(await register.getMetricsAsJSON()).toHaveLength(0);
 
 		processOpenFileDescriptors();
