@@ -12,6 +12,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - Drop support for Node.js versions 16, 18, 21 and 23
 - Metric internal storage ('hashMap') changed to a separate object, LabelMap. If you have
   subclassed the built-in metric types you may need to adjust your code.
+- Migrated test suite from Jest to Node.js built-in test runner (node:test)
 
 ### Changed
 
@@ -31,11 +32,15 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - ci: switch out deprecated benchmark-regression library for replacement
 - AggregatorRegistry renamed to ClusterRegistry, old name deprecated
 - chore: update faceoff to 1.1
+- perf: Avoid array conversion in getMetricsAsJSON by directly iterating over metric values (~1.3% faster)
+- perf: Optimize histogram and string escaping for better metrics serialization
+- perf: Optimize tdigest by replacing forEach/map with for loops (~25% faster percentile queries)
 
 ### Added
 
 - Expanded benchmarking code
 - new WorkerRegistry to provide equivalent support to AggregatorRegistry
+- feat: Vendor tdigest@0.1.1 and bintrees dependencies to eliminate external dependency on unmaintained packages
 
 ## [15.1.3] - 2024-06-27
 
