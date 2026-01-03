@@ -18,10 +18,12 @@ const benchmarks = new Benchmark({
 	'prom-client@current': { location: process.cwd() },
 });
 
+benchmarks.suite('bintree', require('./bintrees'));
+benchmarks.suite('tdigest', require('./tdigest'));
+benchmarks.suite('util', require('./util'));
 benchmarks.suite('counter', require('./counter'));
 benchmarks.suite('gauge', require('./gauge'));
 benchmarks.suite('histogram', require('./histogram'));
-benchmarks.suite('util', require('./util'));
 benchmarks.suite('summary', require('./summary'));
 benchmarks.suite('registry', require('./registry'));
 benchmarks.suite('cluster', require('./cluster'));
