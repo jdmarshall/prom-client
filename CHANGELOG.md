@@ -54,6 +54,7 @@ This release marks our first release under the Prometheus umbrella.
 - Export `MetricObject`, `MetricObjectWithValues`, `MetricValue` and `MetricValueWithName` from the TypeScript definitions
 - chore: Old label processing code marked as deprecated
 - Improve cluster support to allow workers to opt out
+- Abort cluster metric responses during process termination
 
 ### Added
 

@@ -19,6 +19,7 @@ const process = require('process');
 const Registry = require('../lib/cluster');
 
 const ANNOUNCEMENT = '@prometheus-io/client:announcement';
+const GET_METRICS_REQ = '@prometheus-io/client:getMetricsReq';
 const GET_METRICS_RES = '@prometheus-io/client:getMetricsRes';
 
 function metric(value) {
@@ -166,5 +167,63 @@ describe.each([
 
 			expect(() => cluster.emit('message', {}, unexpected)).not.toThrow();
 		});
+	});
+});
+
+describe('worker message handling', () => {
+	it('does not send metrics after the IPC channel disconnects', async () => {
+		jest.resetModules();
+		jest.doMock('cluster', () => {
+			return { isPrimary: false };
+		});
+
+		const messageListeners = new Set(process.listeners('message'));
+		const connectedDescriptor = Object.getOwnPropertyDescriptor(
+			process,
+			'connected',
+		);
+		const sendDescriptor = Object.getOwnPropertyDescriptor(process, 'send');
+		const send = jest.fn();
+		let listener;
+
+		try {
+			Object.defineProperty(process, 'connected', {
+				configurable: true,
+				value: true,
+				writable: true,
+			});
+			Object.defineProperty(process, 'send', {
+				configurable: true,
+				value: send,
+			});
+
+			const AggregatorRegistry = require('../lib/cluster');
+			new AggregatorRegistry();
+
+			listener = process
+				.listeners('message')
+				.find(candidate => !messageListeners.has(candidate));
+			expect(listener).toBeDefined();
+
+			listener({ type: GET_METRICS_REQ, requestId: 1 });
+			process.connected = false;
+			await new Promise(resolve => setImmediate(resolve));
+
+			expect(send).toHaveBeenCalledTimes(1); // Announcement
+		} finally {
+			if (listener) process.removeListener('message', listener);
+			if (connectedDescriptor) {
+				Object.defineProperty(process, 'connected', connectedDescriptor);
+			} else {
+				delete process.connected;
+			}
+			if (sendDescriptor) {
+				Object.defineProperty(process, 'send', sendDescriptor);
+			} else {
+				delete process.send;
+			}
+			jest.dontMock('cluster');
+			jest.resetModules();
+		}
 	});
 });
