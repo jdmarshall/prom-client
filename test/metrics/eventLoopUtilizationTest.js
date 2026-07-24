@@ -19,8 +19,14 @@ describe('eventLoopUtilization', () => {
 
 		elu(register, { eventLoopUtilizationTimeout: 50 });
 
-		const expectedELU = Math.random();
-		await blockEventLoop(expectedELU, 800);
+		// Compare against the ELU actually measured over the same window rather
+		// than the target ratio, so CI scheduling noise cancels out.
+		const eluStart = eventLoopUtilization();
+		await blockEventLoop(Math.random(), 800);
+		const expectedELU = eventLoopUtilization(
+			eventLoopUtilization(),
+			eluStart,
+		).utilization;
 
 		const metrics = await register.getMetricsAsJSON();
 		expect(metrics).toHaveLength(2);
