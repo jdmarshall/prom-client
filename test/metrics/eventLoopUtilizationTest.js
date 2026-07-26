@@ -6,11 +6,7 @@ const elu = require('../../lib/metrics/eventLoopUtilization');
 const { eventLoopUtilization } = require('perf_hooks').performance;
 
 describe('eventLoopUtilization', () => {
-	beforeAll(() => {
-		register.clear();
-	});
-
-	afterEach(() => {
+	beforeEach(() => {
 		register.clear();
 	});
 
