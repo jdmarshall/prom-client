@@ -17,6 +17,11 @@ will only reveal that individual worker's metrics, which is generally
 undesirable. To solve this, you can aggregate all of the workers' metrics in the
 master process. See `example/cluster.js` for an example.
 
+Instantiate `ClusterRegistry` before branching on `cluster.isPrimary`, as shown
+in the example. Its constructor installs the appropriate IPC listener in each
+process; if only the primary creates it, workers cannot answer aggregation
+requests and `clusterMetrics()` times out.
+
 Default metrics use sensible aggregation methods. (Note, however, that the event
 loop lag mean and percentiles are averaged, which is not perfectly accurate.)
 Custom metrics are summed across workers by default. To use a different
@@ -54,6 +59,11 @@ available on Linux.
 - `register` to which registry the metrics should be registered. Default: the global default registry.
 - `gcDurationBuckets` with custom buckets for GC duration histogram. Default buckets of GC duration histogram are `[0.001, 0.01, 0.1, 1, 2, 5]` (in seconds).
 - `eventLoopMonitoringPrecision` with sampling rate in milliseconds. Must be greater than zero. Default: 10.
+- `eventLoopUtilizationTimeout` interval in milliseconds to calculate event loop utilization. Must be greater than zero. Default: 100.
+- `eventLoopUtilizationBuckets` with custom buckets for the event loop utilization histogram. Default buckets are `[0.01, 0.05, 0.1, 0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 0.95, 0.99, 1]`.
+- `eventLoopUtilizationPercentiles` with custom percentiles for the event loop utilization summary. Default percentiles are `[0.01, 0.05, 0.5, 0.9, 0.95, 0.99, 0.999]`.
+- `eventLoopUtilizationMaxAgeSeconds` summary sliding window time in seconds. Must be greater than zero. Default: 60.
+- `eventLoopUtilizationAgeBuckets` summary sliding window buckets. Must be greater than zero. Default: 5.
 
 To register metrics to another registry, pass it in as `register`:
 

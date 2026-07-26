@@ -7,14 +7,19 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+This release marks our first release under the Prometheus umbrella.
+
 ### Breaking
 
-- Drop support for Node.js versions 16, 18, 21 and 23
+- Drop support for Node.js versions 16, 18, 20, 21 and 23
 - Metric internal storage ('hashMap') changed to a separate object, LabelMap. If you have
   subclassed the built-in metric types you may need to adjust your code.
+- Counter Exemplars now report the value rather than the delta
 
 ### Changed
 
+- Allow `Pushgateway` to accept a custom registry as the second constructor argument
+- Add `Registry#getMetricsAsString()` to the TypeScript definitions
 - Improve types for no labels
 - perf: Faster stats gathering with lower memory overhead
 - Simplified number format logic
@@ -34,9 +39,15 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - chore: update faceoff to 1.1
 - perf: Stat aggregation uses similar strategy to collection. 60% faster aggregation
 - ci: Run additional benchmarks against trunk
+- chore: Add copyright license headers and test
+- Make cluster and worker-thread metric aggregation order deterministic
+- Export `MetricObject`, `MetricObjectWithValues`, `MetricValue` and `MetricValueWithName` from the TypeScript definitions
 
 ### Added
 
+- Add `nodejs_eventloop_utilization_summary` and `nodejs_eventloop_utilization_histogram` to the default metrics
+- Add debug logging for metrics collection failures.
+- Node 26 added to the test matrix
 - Expanded benchmarking code
 - new WorkerRegistry to provide equivalent support to AggregatorRegistry
 - Added examples for Summary metric
