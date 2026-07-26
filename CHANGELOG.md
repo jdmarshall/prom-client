@@ -40,6 +40,7 @@ This release marks our first release under the Prometheus umbrella.
 - perf: Stat aggregation uses similar strategy to collection. 60% faster aggregation
 - chore: Add copyright license headers and test
 - Make cluster and worker-thread metric aggregation order deterministic
+- Export `MetricObject`, `MetricObjectWithValues`, `MetricValue` and `MetricValueWithName` from the TypeScript definitions
 
 ### Added
 
