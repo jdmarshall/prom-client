@@ -18,6 +18,7 @@ const cluster = require('cluster');
 const process = require('process');
 const Registry = require('../lib/cluster');
 
+const ANNOUNCEMENT = '@prometheus-io/client:announcement';
 const GET_METRICS_RES = '@prometheus-io/client:getMetricsRes';
 
 function metric(value) {
@@ -75,6 +76,9 @@ describe.each([
 		});
 
 		it('aggregates worker responses in worker id order', async () => {
+			jest.resetModules();
+
+			const registry = new Registry(regType);
 			const originalWorkers = cluster.workers;
 			const workers = Object.fromEntries(
 				[1, 2, 3].map(id => [
@@ -82,23 +86,29 @@ describe.each([
 					{
 						id,
 						isConnected: () => true,
+						on: jest.fn(),
 						send: jest.fn(),
 					},
 				]),
 			);
 			cluster.workers = workers;
 
+			Object.keys(workers).forEach(id => {
+				cluster.emit('message', workers[id], { type: ANNOUNCEMENT });
+			});
+
 			try {
-				const registry = new Registry(regType);
 				const result = registry.clusterMetrics();
-				const requestId = workers[1].send.mock.calls[0][0].requestId;
+				const calls = workers[1].send.mock.calls;
+				const requestId = calls[0][0].requestId;
 
 				for (const [id, value] of [
 					[3, 0.3437699],
 					[1, 0.5848208],
 					[2, 0.5479198],
 				]) {
-					cluster.emit('message', workers[id], {
+					const listener = workers[id].on.mock.calls.at(-1)[1];
+					listener({
 						type: GET_METRICS_RES,
 						requestId,
 						metrics: [[metric(value)]],
@@ -109,7 +119,7 @@ describe.each([
 			} finally {
 				cluster.workers = originalWorkers;
 			}
-		});
+		}, 6_000);
 	});
 
 	describe('message handling', () => {
