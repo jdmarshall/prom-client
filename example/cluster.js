@@ -22,6 +22,10 @@ const metricsServer = express();
 const clusterRegistry = new ClusterRegistry();
 
 if (cluster.isPrimary) {
+	require('../').collectDefaultMetrics({
+		gcDurationBuckets: [0.001, 0.01, 0.1, 1, 2, 5], // These are the default buckets.
+	});
+
 	for (let i = 1; i <= 4; i++) {
 		cluster.fork({ ...process.env, PORT: 3000 + i });
 	}

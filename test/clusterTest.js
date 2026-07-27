@@ -72,7 +72,7 @@ describe.each([
 			const AggregatorRegistry = require('../lib/cluster');
 			const ar = new AggregatorRegistry(regType);
 			const metrics = await ar.clusterMetrics();
-			expect(metrics).toEqual('');
+			expect(metrics.trim()).toEqual('');
 		});
 
 		it('aggregates worker responses in worker id order', async () => {
@@ -120,6 +120,27 @@ describe.each([
 				cluster.workers = originalWorkers;
 			}
 		}, 6_000);
+
+		it('aggregates telemetry from primary thread', async () => {
+			jest.resetModules();
+
+			require('../lib/cluster');
+			const { Gauge } = require('../index');
+
+			const gauge = new Gauge({ name: 'primary_gauge_test', help: 'help' });
+
+			try {
+				const AggregatorRegistry = require('../lib/cluster');
+				const ar = new AggregatorRegistry(regType);
+
+				gauge.set(10);
+
+				const result = ar.clusterMetrics();
+				await expect(result).resolves.toContain('primary_gauge_test 10\n');
+			} finally {
+				gauge.remove();
+			}
+		});
 	});
 
 	describe('message handling', () => {
