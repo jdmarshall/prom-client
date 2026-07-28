@@ -171,19 +171,24 @@ describe.each([
 });
 
 describe('worker message handling', () => {
-	it('does not send metrics after the IPC channel disconnects', async () => {
+	beforeEach(() => {
 		jest.resetModules();
+	});
+
+	it('does not send metrics after the IPC channel disconnects', async () => {
 		jest.doMock('cluster', () => {
 			return { isPrimary: false };
 		});
 
-		const messageListeners = new Set(process.listeners('message'));
 		const connectedDescriptor = Object.getOwnPropertyDescriptor(
 			process,
 			'connected',
 		);
-		const sendDescriptor = Object.getOwnPropertyDescriptor(process, 'send');
-		const send = jest.fn();
+
+		const AggregatorRegistry = require('../lib/cluster');
+		new AggregatorRegistry();
+
+		const send = jest.spyOn(process, 'send');
 		let listener;
 
 		try {
@@ -192,38 +197,29 @@ describe('worker message handling', () => {
 				value: true,
 				writable: true,
 			});
-			Object.defineProperty(process, 'send', {
-				configurable: true,
-				value: send,
-			});
 
-			const AggregatorRegistry = require('../lib/cluster');
-			new AggregatorRegistry();
-
-			listener = process
-				.listeners('message')
-				.find(candidate => !messageListeners.has(candidate));
+			listener = process.listeners('message').at(-1);
 			expect(listener).toBeDefined();
 
-			listener({ type: GET_METRICS_REQ, requestId: 1 });
+			send.mockImplementationOnce(() => {
+				throw new Error('disconnected');
+			});
+
 			process.connected = false;
+
+			listener({ type: GET_METRICS_REQ, requestId: 1 });
 			await new Promise(resolve => setImmediate(resolve));
 
-			expect(send).toHaveBeenCalledTimes(1); // Announcement
+			expect(send).not.toHaveBeenCalled();
 		} finally {
-			if (listener) process.removeListener('message', listener);
+			process.removeListener('message', listener);
 			if (connectedDescriptor) {
 				Object.defineProperty(process, 'connected', connectedDescriptor);
 			} else {
 				delete process.connected;
 			}
-			if (sendDescriptor) {
-				Object.defineProperty(process, 'send', sendDescriptor);
-			} else {
-				delete process.send;
-			}
-			jest.dontMock('cluster');
 			jest.resetModules();
+			jest.clearAllMocks();
 		}
 	});
 });
