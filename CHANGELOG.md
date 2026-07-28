@@ -25,6 +25,7 @@ This release marks our first release under the Prometheus umbrella.
   runtime object. Value-style uses such as `MetricType.Counter` (which threw at runtime)
   no longer compile; compare against the string literals instead. Under
   `verbatimModuleSyntax`, import it with `import type`.
+- The cluster primary now reports metrics
 
 ### Changed
 
@@ -46,12 +47,13 @@ This release marks our first release under the Prometheus umbrella.
 - ci: Run benchmarks for pull requests
 - ci: switch out deprecated benchmark-regression library for replacement
 - AggregatorRegistry renamed to ClusterRegistry, old name deprecated
-- chore: update faceoff to 1.3
+- chore: replace benchmark-regression dependency with faceoff
 - perf: Stat aggregation uses similar strategy to collection. 60% faster aggregation
 - chore: Add copyright license headers and test
 - Make cluster and worker-thread metric aggregation order deterministic
 - Export `MetricObject`, `MetricObjectWithValues`, `MetricValue` and `MetricValueWithName` from the TypeScript definitions
 - chore: Old label processing code marked as deprecated
+- Improve cluster support to allow workers to opt out
 
 ### Added
 

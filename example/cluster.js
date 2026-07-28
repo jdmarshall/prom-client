@@ -36,6 +36,7 @@ if (cluster.isPrimary) {
 			res.set('Content-Type', clusterRegistry.contentType);
 			res.send(metrics);
 		} catch (ex) {
+			console.error(ex);
 			res.statusCode = 500;
 			res.send(ex.message);
 		}

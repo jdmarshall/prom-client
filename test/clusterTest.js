@@ -75,48 +75,56 @@ describe.each([
 			expect(metrics.trim()).toEqual('');
 		});
 
-		it('aggregates worker responses in worker id order', async () => {
-			jest.resetModules();
+		it("listeners don't accumulate", () => {
+			for (let i = 0; i < 30; i++) {
+				jest.resetModules();
 
-			const registry = new Registry(regType);
+				const AggregatorRegistry = require('../lib/cluster');
+				const ar = new AggregatorRegistry(regType);
+			}
+		});
+
+		it('aggregates worker responses in worker id order', async () => {
 			const originalWorkers = cluster.workers;
+			jest.resetModules();
+			const AggregatorRegistry = require('../lib/cluster');
+			const registry = new AggregatorRegistry(regType);
 			const workers = Object.fromEntries(
 				[1, 2, 3].map(id => [
 					id,
 					{
 						id,
 						isConnected: () => true,
-						on: jest.fn(),
 						send: jest.fn(),
 					},
 				]),
 			);
 			cluster.workers = workers;
 
-			Object.keys(workers).forEach(id => {
-				cluster.emit('message', workers[id], { type: ANNOUNCEMENT });
+			Object.values(workers).forEach(worker => {
+				cluster.emit('message', worker, { type: ANNOUNCEMENT });
 			});
 
 			try {
 				const result = registry.clusterMetrics();
-				const calls = workers[1].send.mock.calls;
-				const requestId = calls[0][0].requestId;
 
 				for (const [id, value] of [
 					[3, 0.3437699],
 					[1, 0.5848208],
 					[2, 0.5479198],
 				]) {
-					const listener = workers[id].on.mock.calls.at(-1)[1];
-					listener({
+					cluster.emit('message', workers[id], {
 						type: GET_METRICS_RES,
-						requestId,
+						requestId: 0,
 						metrics: [[metric(value)]],
 					});
 				}
 
 				await expect(result).resolves.toContain('test_metric 1.4765105');
 			} finally {
+				Object.values(workers).forEach(worker => {
+					cluster.emit('disconnect', worker);
+				});
 				cluster.workers = originalWorkers;
 			}
 		}, 6_000);
