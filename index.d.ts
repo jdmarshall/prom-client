@@ -270,12 +270,11 @@ export type Metric<T extends string = NoLabelNameType> =
  */
 export type Aggregator = 'omit' | 'sum' | 'first' | 'min' | 'max' | 'average';
 
-export enum MetricType {
-	Counter,
-	Gauge,
-	Histogram,
-	Summary,
-}
+/**
+ * The metric type reported in metric objects, such as those returned by
+ * `Registry#getMetricsAsJSON()`. Matches the runtime string values.
+ */
+export type MetricType = 'counter' | 'gauge' | 'histogram' | 'summary';
 
 type CollectFunction<T> = (this: T) => void | Promise<void>;
 

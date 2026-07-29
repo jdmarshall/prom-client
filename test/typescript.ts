@@ -18,6 +18,7 @@ import {
 	Registry,
 	MetricObject,
 	MetricObjectWithValues,
+	MetricType,
 	MetricValue,
 	MetricValueWithName,
 } from '../index';
@@ -71,3 +72,38 @@ async function metricObjectTypesAreExported() {
 	void named;
 }
 void metricObjectTypesAreExported;
+
+// MetricType matches the runtime strings reported in metric metadata, so a
+// reported type can be compared against a literal and narrowed without casts.
+// The switch fails to compile if the union and this member list ever drift
+// apart, in either direction.
+async function metricTypeMatchesRuntimeStrings() {
+	const t: MetricType = 'counter';
+	void t;
+
+	const [first] = await registry.getMetricsAsJSON();
+	if (first !== undefined && first.type === 'counter') {
+		const narrowed: 'counter' = first.type;
+		void narrowed;
+	}
+
+	const lockMembers = (type: MetricType): string => {
+		switch (type) {
+			case 'counter':
+			case 'gauge':
+			case 'histogram':
+			case 'summary':
+				return type;
+			default: {
+				const missing: never = type;
+				return missing;
+			}
+		}
+	};
+	void lockMembers;
+
+	// @ts-expect-error MetricType is a type-only string union with no runtime
+	// object (#336), so value-style access must not compile.
+	void MetricType.Counter;
+}
+void metricTypeMatchesRuntimeStrings;
