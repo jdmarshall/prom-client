@@ -15,6 +15,11 @@ This release marks our first release under the Prometheus umbrella.
 - Metric internal storage ('hashMap') changed to a separate object, LabelMap. If you have
   subclassed the built-in metric types you may need to adjust your code.
 - Counter Exemplars now report the value rather than the delta
+- TypeScript: `MetricType` is now a string union matching the runtime values
+  (`'counter' | 'gauge' | 'histogram' | 'summary'`) instead of a numeric enum that had no
+  runtime object. Value-style uses such as `MetricType.Counter` (which threw at runtime)
+  no longer compile; compare against the string literals instead. Under
+  `verbatimModuleSyntax`, import it with `import type`.
 
 ### Changed
 
