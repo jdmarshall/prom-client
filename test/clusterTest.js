@@ -18,7 +18,7 @@ const cluster = require('cluster');
 const process = require('process');
 const Registry = require('../lib/cluster');
 
-const GET_METRICS_RES = '@prometheus/client:getMetricsRes';
+const GET_METRICS_RES = '@prometheus-io/client:getMetricsRes';
 
 function metric(value) {
 	return {
@@ -120,7 +120,7 @@ describe.each([
 
 			//Emulate a response that has been deleted from requests
 			const unexpected = {
-				type: '@prometheus/client:getMetricsRes',
+				type: '@prometheus-io/client:getMetricsRes',
 				metrics: ['{}'],
 				requestId: -3,
 			};

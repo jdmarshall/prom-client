@@ -19,8 +19,8 @@ const { setTimeout: delay } = require('timers/promises');
 const { BroadcastChannel } = require('worker_threads');
 const Registry = require('../lib/worker');
 
-const GET_METRICS_REQ = '@prometheus/client:getMetricsReq';
-const GET_METRICS_RES = '@prometheus/client:getMetricsRes';
+const GET_METRICS_REQ = '@prometheus-io/client:getMetricsReq';
+const GET_METRICS_RES = '@prometheus-io/client:getMetricsRes';
 
 function metric(value) {
 	return {
@@ -52,10 +52,10 @@ describe.each([
 			it('aggregates worker responses in thread id order', async () => {
 				const registry = new Registry(regType);
 				const announcementChannel = new BroadcastChannel(
-					'@prometheus/client:announce',
+					'@prometheus-io/client:announce',
 				);
 				const responders = [1, 2, 3].map(threadId => {
-					const name = `@prometheus/client:test-worker:${threadId}`;
+					const name = `@prometheus-io/client:test-worker:${threadId}`;
 					registry.addWorker(name);
 					return {
 						threadId,
@@ -111,7 +111,7 @@ describe.each([
 
 			//Emulate a response that has been deleted from requests
 			const unexpected = {
-				type: '@prometheus/client:getMetricsRes',
+				type: '@prometheus-io/client:getMetricsRes',
 				metrics: ['{}'],
 				requestId: -3,
 			};
