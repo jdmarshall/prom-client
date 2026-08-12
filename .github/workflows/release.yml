@@ -37,6 +37,15 @@ jobs:
             fail "No secret key available after import."
           fi
 
+          # Tag check
+          package_version=$(node -e "console.log(require('./package.json').version)")
+          tag=$(git describe --tags)
+          expected="v$package_version"
+
+          if [ "$expected" != "$tag" ]; then
+            fail "Tag and package.json version don't match. '$tag' vs '$expected'"
+          fi
+
       - run: npm i
       - run: npm test
       - run: npm publish --provenance --access public --tag alpha
