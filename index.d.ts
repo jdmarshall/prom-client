@@ -206,7 +206,6 @@ export class WorkerRegistry<T extends RegistryContentType> extends Registry<T> {
 	 */
 	workerMetrics(): Promise<string>;
 
-	addWorker(worker: Worker): void;
 	/**
 	 * Sets the registry or registries to be aggregated. Call from workers to
 	 * use a registry/registries other than the default global registry.
