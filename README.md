@@ -20,6 +20,9 @@ the result of `await registry.metrics()`.
 
 ### Usage with Node.js's `cluster` module
 
+Note: the Prometheus client now also supports worker threads, with much the same
+constraints as cluster workers. See `example/worker.js`.
+
 Node.js's `cluster` module spawns multiple processes and hands off socket
 connections to those workers. Returning metrics from a worker's local registry
 will only reveal that individual worker's metrics, which is generally
@@ -41,12 +44,16 @@ for an example.)
 If you need to expose metrics about an individual worker, you can include a
 value that is unique to the worker (such as the worker ID or process ID) in a
 label. (See `example/server.js` for an example using
-`worker_${cluster.worker.id}` as a label value.)
+`worker_${cluster.worker.id}` as a label value.) But this will result in a high
+cardinality situation, which the Aggregator is generally meant to avoid.
 
 Metrics are aggregated from the global registry by default. To use a different
 registry, call
 `client.AggregatorRegistry.setRegistries(registryOrArrayOfRegistries)` from the
 worker processes.
+
+Please also see [The Workers Readme](Workers.md) for special notes on handling workers
+that do not survive for the entire run time of the application.
 
 ## API
 
