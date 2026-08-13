@@ -3,6 +3,15 @@
 A prometheus client for Node.js that supports histogram, summaries, gauges and
 counters.
 
+## Installation
+
+```bash
+npm install @prometheus-io/client
+```
+
+This package was previously published as `prom-client`. See the
+[CHANGELOG](CHANGELOG.md) for the breaking changes involved in upgrading.
+
 ## Usage
 
 See example folder for a sample usage. The library does not bundle any web

@@ -11,6 +11,11 @@ This release marks our first release under the Prometheus umbrella.
 
 ### Breaking
 
+- The package is renamed from `prom-client` to `@prometheus-io/client`. Update your
+  dependencies and any `require()`/`import` statements accordingly.
+- The cluster and worker thread IPC message types are renamed from `prom-client:*`
+  to `@prometheus-io/client:*`. A cluster primary and its workers must therefore run
+  the same major version.
 - Drop support for Node.js versions 16, 18, 20, 21 and 23
 - Metric internal storage ('hashMap') changed to a separate object, LabelMap. If you have
   subclassed the built-in metric types you may need to adjust your code.
@@ -41,7 +46,7 @@ This release marks our first release under the Prometheus umbrella.
 - ci: Run benchmarks for pull requests
 - ci: switch out deprecated benchmark-regression library for replacement
 - AggregatorRegistry renamed to ClusterRegistry, old name deprecated
-- chore: update faceoff to 1.1
+- chore: update faceoff to 1.3
 - perf: Stat aggregation uses similar strategy to collection. 60% faster aggregation
 - chore: Add copyright license headers and test
 - Make cluster and worker-thread metric aggregation order deterministic
