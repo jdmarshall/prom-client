@@ -70,6 +70,14 @@ export class Registry<
 	getMetricsAsJSON(): Promise<MetricObjectWithValues<MetricValue<string>>[]>;
 
 	/**
+	 * Get all metrics as objects
+	 * @param aggregator Filter by aggregator type
+	 */
+	getMetricsAsJSON(
+		aggregator: string,
+	): Promise<MetricObjectWithValues<MetricValue<string>>[]>;
+
+	/**
 	 * Get string representation for a metric
 	 * @param metric Metric to convert to a string
 	 */
@@ -79,6 +87,12 @@ export class Registry<
 	 * Get all metrics as objects
 	 */
 	getMetricsAsArray(): MetricObject[];
+
+	/**
+	 * Get all metrics as objects
+	 * @param aggregator Filter by aggregator type
+	 */
+	getMetricsAsArray(aggregator: string): MetricObject[];
 
 	/**
 	 * Remove a single metric
