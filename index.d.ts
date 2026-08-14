@@ -207,6 +207,17 @@ export class WorkerRegistry<T extends RegistryContentType> extends Registry<T> {
 	workerMetrics(): Promise<string>;
 
 	/**
+	 * Orderly shutdown of the registry.
+	 *
+	 * This is meant to be called prior to`process.exit()` to facilitate accurate metrics.
+	 *
+	 * If this instance is the primary, then it will wait for any in-flight
+	 * metrics to finish collecting or time out prior to returning.
+	 * @returns {Promise<void>}
+	 */
+	shutdown(): Promise<void>;
+
+	/**
 	 * Sets the registry or registries to be aggregated. Call from workers to
 	 * use a registry/registries other than the default global registry.
 	 * @param {Array<Registry>|Registry} regs Registry or registries to be
@@ -235,6 +246,17 @@ export class AggregatorRegistry<
 	 * metrics.
 	 */
 	clusterMetrics(): Promise<string>;
+
+	/**
+	 * Orderly shutdown of the registry.
+	 *
+	 * This is meant to be called prior to`process.exit()` to facilitate accurate metrics.
+	 *
+	 * If this instance is the primary, then it will wait for any in-flight
+	 * metrics to finish collecting or time out prior to returning.
+	 * @returns {Promise<void>}
+	 */
+	shutdown(): Promise<void>;
 
 	/**
 	 * Sets the registry or registries to be aggregated. Call from workers to

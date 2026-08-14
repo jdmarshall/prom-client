@@ -17,6 +17,9 @@
 const cluster = require('cluster');
 const process = require('process');
 const Registry = require('../lib/cluster');
+const AggregatorRegistry = require('../lib/cluster');
+const { BroadcastChannel } = require('worker_threads');
+const { setTimeout: delay } = require('timers/promises');
 
 const ANNOUNCEMENT = '@prometheus-io/client:announcement';
 const GET_METRICS_REQ = '@prometheus-io/client:getMetricsReq';
@@ -128,7 +131,7 @@ describe.each([
 				});
 				cluster.workers = originalWorkers;
 			}
-		}, 6_000);
+		});
 
 		it('aggregates telemetry from primary thread', async () => {
 			jest.resetModules();
@@ -148,6 +151,50 @@ describe.each([
 				await expect(result).resolves.toContain('primary_gauge_test 10\n');
 			} finally {
 				gauge.remove();
+			}
+		});
+	});
+
+	describe('shutdown()', () => {
+		it('returns immediately on no outstanding requests', async () => {
+			const AggregatorRegistry = require('../lib/cluster');
+			const ar = new AggregatorRegistry();
+
+			await expect(ar.shutdown()).resolves.not.toThrow();
+		});
+
+		it('waits for pending requests', async () => {
+			const originalWorkers = cluster.workers;
+			jest.resetModules();
+			const AggregatorRegistry = require('../lib/cluster');
+			const registry = new AggregatorRegistry(regType);
+			const worker = {
+				id: 53,
+				isConnected: () => true,
+				send: jest.fn(),
+			};
+
+			cluster.workers = [worker];
+
+			cluster.emit('message', worker, { type: ANNOUNCEMENT });
+
+			try {
+				const results = [];
+				const promise = registry.clusterMetrics().then(() => results.push(1));
+				const shutdown = registry.shutdown().then(() => results.push(2));
+
+				cluster.emit('message', worker, {
+					type: GET_METRICS_RES,
+					requestId: 0,
+					metrics: [[metric(7)]],
+				});
+
+				await Promise.all([promise, shutdown]);
+
+				expect(results).toEqual([1, 2]);
+			} finally {
+				cluster.emit('disconnect', worker);
+				cluster.workers = originalWorkers;
 			}
 		});
 	});

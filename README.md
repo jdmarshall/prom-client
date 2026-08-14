@@ -18,7 +18,7 @@ See example folder for a sample usage. The library does not bundle any web
 framework. To expose the metrics, respond to Prometheus's scrape requests with
 the result of `await registry.metrics()`.
 
-### Usage with Node.js's `cluster` module
+### Usage with Node.js's `cluster` or Worker module
 
 Note: the Prometheus client now also supports worker threads, with much the same
 constraints as cluster workers. See `example/worker.js`.
@@ -51,6 +51,12 @@ Metrics are aggregated from the global registry by default. To use a different
 registry, call
 `client.AggregatorRegistry.setRegistries(registryOrArrayOfRegistries)` from the
 worker processes.
+
+#### Process Lifecycle
+
+The `shutdown()` method is provided to help cleanly shut down the application while
+metrics calls are pending. In the future this will also help with workers that are
+short-lived or need to be restarted.
 
 Please also see [The Workers Readme](Workers.md) for special notes on handling workers
 that do not survive for the entire run time of the application.

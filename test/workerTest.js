@@ -48,59 +48,112 @@ describe.each([
 			expect(metrics).toEqual('');
 		});
 
-		if (tag === 'Prometheus')
-			it('aggregates worker responses in thread id order', async () => {
-				const registry = new Registry(regType);
-				const announcementChannel = new BroadcastChannel(
-					'@prometheus-io/client:announce',
-				).unref();
-				const responders = [1, 2, 3].map(threadId => {
-					const name = `@prometheus-io/client:test-worker:${threadId}`;
-					const channel = new BroadcastChannel(name).unref();
+		it('aggregates worker responses in thread id order', async () => {
+			jest.resetModules();
+			const AggregatorRegistry = require('../lib/worker');
+			const registry = new AggregatorRegistry(regType);
+			const announcementChannel = new BroadcastChannel(
+				'@prometheus-io/client:announce',
+			).unref();
+			const responders = [1, 2, 3].map(threadId => {
+				const name = `@prometheus-io/client:test-worker:${threadId}`;
+				const channel = new BroadcastChannel(name).unref();
 
-					announcementChannel.postMessage({
-						type: ANNOUNCEMENT,
-						name,
+				announcementChannel.postMessage({
+					type: ANNOUNCEMENT,
+					name,
+					threadId,
+				});
+
+				return { threadId, channel };
+			});
+
+			await delay(5); // Let announcements arrive
+
+			let finishSendingResponses;
+			const responsesSent = new Promise(resolve => {
+				finishSendingResponses = resolve;
+			});
+			announcementChannel.addEventListener('message', async event => {
+				if (event.data.type !== GET_METRICS_REQ) return;
+
+				for (const [threadId, value] of [
+					[3, 0.3437699],
+					[1, 0.5848208],
+					[2, 0.5479198],
+				]) {
+					responders[threadId - 1].channel.postMessage({
+						type: GET_METRICS_RES,
+						requestId: event.data.requestId,
 						threadId,
+						metrics: [[metric(value)]],
 					});
+					await delay(5);
+				}
+				finishSendingResponses();
+			});
 
-					return { threadId, channel };
-				});
+			try {
+				const result = await registry.workerMetrics();
+				await responsesSent;
+				expect(result).toContain('test_metric 1.4765105');
+			} finally {
+				announcementChannel.close();
+				for (const responder of responders) responder.channel.close();
+			}
+		});
+	});
 
-				await delay(5); // Let announcements arrive
+	describe('shutdown()', () => {
+		let AggregatorRegistry;
+		beforeEach(() => {
+			jest.resetModules();
+			AggregatorRegistry = require('../lib/worker');
+		});
 
-				let finishSendingResponses;
-				const responsesSent = new Promise(resolve => {
-					finishSendingResponses = resolve;
-				});
-				announcementChannel.addEventListener('message', async event => {
-					if (event.data.type !== GET_METRICS_REQ) return;
+		it('returns immediately on no outstanding requests', async () => {
+			const registry = new AggregatorRegistry();
 
-					for (const [threadId, value] of [
-						[3, 0.3437699],
-						[1, 0.5848208],
-						[2, 0.5479198],
-					]) {
-						responders[threadId - 1].channel.postMessage({
-							type: GET_METRICS_RES,
-							requestId: event.data.requestId,
-							threadId,
-							metrics: [[metric(value)]],
-						});
-						await delay(5);
-					}
-					finishSendingResponses();
-				});
+			await expect(registry.shutdown()).resolves.not.toThrow();
+		});
 
-				try {
-					const result = await registry.workerMetrics();
-					await responsesSent;
-					expect(result).toContain('test_metric 1.4765105');
-				} finally {
-					announcementChannel.close();
-					for (const responder of responders) responder.channel.close();
+		it('waits for pending requests', async () => {
+			const registry = new AggregatorRegistry();
+
+			const announcementChannel = new BroadcastChannel(
+				'@prometheus-io/client:announce',
+			).unref();
+
+			const threadId = 22;
+			const name = `@prometheus-io/client:test-worker:${threadId}`;
+			const channel = new BroadcastChannel(name).unref();
+
+			announcementChannel.postMessage({
+				type: ANNOUNCEMENT,
+				name,
+				threadId,
+			});
+
+			await delay(5); // Let announcements arrive
+
+			announcementChannel.addEventListener('message', async event => {
+				if (event.data.type === GET_METRICS_REQ) {
+					channel.postMessage({
+						type: GET_METRICS_RES,
+						requestId: event.data.requestId,
+						threadId,
+						metrics: [[metric(2)]],
+					});
 				}
 			});
+
+			const results = [];
+			const promise = registry.workerMetrics().then(() => results.push(1));
+			const shutdown = registry.shutdown().then(() => results.push(2));
+			await Promise.all([promise, shutdown]);
+
+			expect(results).toEqual([1, 2]);
+		});
 	});
 
 	describe('message handling', () => {
