@@ -197,16 +197,12 @@ describe.each([
 
 			gauge.set(0.8675309);
 
-			let metrics;
-
 			// wait until worker has processed the ACk before continuing
-			const acknowledged = new Promise(resolve => {
+			const metrics = new Promise(resolve => {
 				channel.addEventListener('message', async event => {
 					if (event.data.type === GOODBYE) {
-						metrics = event.data.metrics;
 						channel.postMessage({ type: ACK, requestId: 0, threadId: 0 });
-					} else if (event.data.type === ACK) {
-						resolve(metrics);
+						resolve(event.data.metrics);
 					}
 				});
 			});
@@ -226,7 +222,7 @@ describe.each([
 					],
 				};
 
-				await expect(acknowledged).resolves.toEqual([[expected]]);
+				await expect(metrics).resolves.toEqual([[expected]]);
 			} finally {
 				channel.close();
 			}
