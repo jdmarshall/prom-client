@@ -18,9 +18,11 @@ const { setTimeout: delay } = require('timers/promises');
 const { BroadcastChannel } = require('worker_threads');
 const Registry = require('../lib/worker');
 
+const ACK = '@prometheus-io/client:ack';
 const ANNOUNCEMENT = '@prometheus-io/client:announcement';
 const GET_METRICS_REQ = '@prometheus-io/client:getMetricsReq';
 const GET_METRICS_RES = '@prometheus-io/client:getMetricsRes';
+const GOODBYE = '@prometheus-io/client:goodbye';
 
 function metric(value) {
 	return {
@@ -56,7 +58,7 @@ describe.each([
 				'@prometheus-io/client:announce',
 			).unref();
 			const responders = [1, 2, 3].map(threadId => {
-				const name = `@prometheus-io/client:test-worker:${threadId}`;
+				const name = `@prometheus-io/client:worker:${threadId}`;
 				const channel = new BroadcastChannel(name).unref();
 
 				announcementChannel.postMessage({
@@ -102,30 +104,17 @@ describe.each([
 				for (const responder of responders) responder.channel.close();
 			}
 		});
-	});
 
-	describe('shutdown()', () => {
-		let AggregatorRegistry;
-		beforeEach(() => {
+		it('accumulate stats from terminated workers', async () => {
 			jest.resetModules();
-			AggregatorRegistry = require('../lib/worker');
-		});
-
-		it('returns immediately on no outstanding requests', async () => {
-			const registry = new AggregatorRegistry();
-
-			await expect(registry.shutdown()).resolves.not.toThrow();
-		});
-
-		it('waits for pending requests', async () => {
-			const registry = new AggregatorRegistry();
-
+			const AggregatorRegistry = require('../lib/worker');
+			const registry = new AggregatorRegistry(regType);
 			const announcementChannel = new BroadcastChannel(
 				'@prometheus-io/client:announce',
 			).unref();
 
-			const threadId = 22;
-			const name = `@prometheus-io/client:test-worker:${threadId}`;
+			const threadId = 134;
+			const name = `@prometheus-io/client:worker:${threadId}`;
 			const channel = new BroadcastChannel(name).unref();
 
 			announcementChannel.postMessage({
@@ -136,23 +125,153 @@ describe.each([
 
 			await delay(5); // Let announcements arrive
 
-			announcementChannel.addEventListener('message', async event => {
-				if (event.data.type === GET_METRICS_REQ) {
-					channel.postMessage({
-						type: GET_METRICS_RES,
-						requestId: event.data.requestId,
-						threadId,
-						metrics: [[metric(2)]],
-					});
-				}
+			const ack = new Promise(resolve => {
+				channel.addEventListener('message', async event => {
+					if (event.data.type === ACK) {
+						resolve(event);
+					}
+				});
 			});
 
-			const results = [];
-			const promise = registry.workerMetrics().then(() => results.push(1));
-			const shutdown = registry.shutdown().then(() => results.push(2));
-			await Promise.all([promise, shutdown]);
+			channel.postMessage({
+				type: GOODBYE,
+				threadId,
+				metrics: [[metric(0.123456)]],
+			});
 
-			expect(results).toEqual([1, 2]);
+			await ack;
+
+			try {
+				const result = await registry.workerMetrics();
+				expect(result).toContain('test_metric 0.123456');
+			} finally {
+				announcementChannel.close();
+				channel.close();
+			}
+		});
+	});
+
+	describe('shutdown()', () => {
+		let AggregatorRegistry;
+		let announcementChannel;
+		let registry;
+		let discovery;
+
+		beforeEach(async () => {
+			jest.resetModules();
+			AggregatorRegistry = require('../lib/worker');
+
+			announcementChannel = new BroadcastChannel(
+				'@prometheus-io/client:announce',
+			).unref();
+
+			registry = new AggregatorRegistry(regType);
+
+			discovery = new Promise(resolve => {
+				announcementChannel.addEventListener('message', async event => {
+					if (event.data.type === ANNOUNCEMENT && !event.data.primary) {
+						resolve(event);
+					}
+				});
+			});
+		});
+
+		afterEach(() => {
+			announcementChannel.close();
+		});
+
+		it('returns immediately on no outstanding requests', async () => {
+			await expect(registry.shutdown()).resolves.not.toThrow();
+		});
+
+		it('sends data back to the primary', async () => {
+			jest.resetModules();
+			AggregatorRegistry = require('../lib/worker');
+
+			const workerRegistry = new AggregatorRegistry(regType, false);
+			const name = `@prometheus-io/client:worker:0`;
+			const channel = new BroadcastChannel(name).unref();
+
+			const { Gauge } = require('../index');
+			const gauge = new Gauge({ name: 'primary_gauge_test', help: 'test' });
+
+			gauge.set(0.8675309);
+
+			let metrics;
+
+			// wait until worker has processed the ACk before continuing
+			const acknowledged = new Promise(resolve => {
+				channel.addEventListener('message', async event => {
+					if (event.data.type === GOODBYE) {
+						metrics = event.data.metrics;
+						channel.postMessage({ type: ACK, requestId: 0, threadId: 0 });
+					} else if (event.data.type === ACK) {
+						resolve(metrics);
+					}
+				});
+			});
+
+			try {
+				await workerRegistry.shutdown();
+				const expected = {
+					aggregator: 'sum',
+					help: 'test',
+					name: 'primary_gauge_test',
+					type: 'gauge',
+					values: [
+						{
+							labels: {},
+							value: 0.8675309,
+						},
+					],
+				};
+
+				await expect(acknowledged).resolves.toEqual([[expected]]);
+			} finally {
+				channel.close();
+			}
+		});
+
+		describe('with workers', () => {
+			let channel;
+
+			beforeEach(async () => {
+				const threadId = 22;
+				const name = `@prometheus-io/client:test-worker:${threadId}`;
+				channel = new BroadcastChannel(name).unref();
+
+				announcementChannel.postMessage({
+					type: ANNOUNCEMENT,
+					name,
+					threadId,
+				});
+
+				announcementChannel.addEventListener('message', async event => {
+					if (event.data.type === GET_METRICS_REQ) {
+						channel.postMessage({
+							type: GET_METRICS_RES,
+							requestId: event.data.requestId,
+							threadId: 22,
+							metrics: [[metric(2)]],
+						});
+					}
+				});
+
+				await discovery;
+			});
+
+			afterEach(() => {
+				channel.close();
+			});
+
+			it('waits for pending requests', async () => {
+				const results = [];
+				const promise = registry.workerMetrics().then(() => results.push(1));
+				const shutdown = registry.shutdown().then(() => results.push(2));
+				await Promise.all([promise, shutdown]);
+
+				expect(results).toEqual([1, 2]);
+			});
 		});
 	});
 

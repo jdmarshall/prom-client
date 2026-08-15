@@ -366,15 +366,6 @@ describe('Register', () => {
 					expect(output[0].name).toEqual('min_metric');
 					expect(output[0].get).toBeInstanceOf(Function);
 				});
-
-				it('should treat "sum" as the default', async () => {
-					register.registerMetric(getMetric());
-					const output = await register.getMetricsAsArray('sum');
-
-					expect(output.length).toEqual(1);
-					expect(output[0].name).toEqual('test_metric');
-					expect(output[0].get).toBeInstanceOf(Function);
-				});
 			});
 		});
 

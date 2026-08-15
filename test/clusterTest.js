@@ -17,8 +17,6 @@
 const cluster = require('cluster');
 const process = require('process');
 const Registry = require('../lib/cluster');
-const AggregatorRegistry = require('../lib/cluster');
-const { BroadcastChannel } = require('worker_threads');
 const { setTimeout: delay } = require('timers/promises');
 
 const ANNOUNCEMENT = '@prometheus-io/client:announcement';
