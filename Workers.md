@@ -1,5 +1,17 @@
 # Notes on collection and short-lived processes
 
+## Introduction
+
+Worker threads present a large surface area for potential loss of telemetry data. In order to avoid
+strange artifacts in your statistics, it's recommended that you hook the process lifecycle events
+in order to guarantee that the aggregator does not lose access to historical data when the worker
+exits.
+
+While the examples here are specific to worker threads, the same general advice also applies to
+cluster workers as well, as the implementations are nearly identical.
+
+## Background
+
 Statsd uses a fire and forget method for dumping stats to an external handler that is responsible
 for the persistence of that data. OpenTelemetry and Prometheus, in contrast, assume that the
 services are stable enough that we can ask them every so often for the data, and rely on them still
@@ -19,52 +31,51 @@ telemetry collection. If you're thinking of adding Prometheus telemetry to your 
 a worker thread, one of your first concerns should be in reducing the number of unrecoverable errors
 your code contains.
 
+## Strategies
+
+### Delegation
+
 In the case of worker threads, sometimes short-lived is a feature, and in others it's an
-inevitability. In these cases, the prometheus client will need a little help from you on tracking
-the lifecycle of those workers.
+inevitability. For extremely short-lived processes, it may be best for you to summarize the work
+that was done in the worker and let the parent convert this information into the parent's own
+statistics. This reduces the amount of aggregation that needs to be done by limiting the number of
+processes that are being directly tracked. This is especially attractive in situations where the
+worker thread is running computationally intensive tasks - these workers may not even respond in a
+timely manner to messages sent to them because they are saturating the event loop with long,
+synchronous tasks.
 
-The biggest challenge is that if a worker is unresponsive, then the prometheus client will time out
-while trying to collect the aggregated metrics, resulting in NO telemetry being reported at all.
-Avoiding this problem would come at a substantial memory premium, as the sum values from every
-worker would need to be retained.
+### Graceful shutdown
 
-Additionally, the Prometheus client retains metadata for every worker it knows about. If you cycle
-workers frequently, then that table will grow without bounds. If we knew for certain that a worker
-was gone, then some of that metadata can be consolidated across all defunct workers, and as long as
-the cardinality of the metrics does not include process-unique data, such as the threadId, then
-twenty dead worker is no more expensive than one.
-
-Because of the nature of workers, it is expected that they may saturate the event loop. That means
-that if we 'ping' them to see if they are still responsive, then they might not reply until after
-we decided they are dead. If they intermittently respond to requests, then the bookkeeping gets
-quite elaborate (expensive).
-
-As the application author, you have more control and visibility over the lifecycle of your workers,
-especially for worker threads.
-
-## Graceful shutdown
+However, if your workers are loading modules that are in common with the rest of your stack, then
+it may be that some of these modules expect telemetry to be running wherever they are running, in
+which case you will want to do graceful shutdowns in the case of errors or orderly shutdown to
+ensure that the aggregator sees this data in between scrape intervals. For this we have the
+`shutdown()` function.
 
 When a worker or cluster worker knows it is terminating, it can flush its latest telemetry to the
 aggregator. This orderly shutdown is the most memory efficient option, as the prometheus client
 can aggregate the data from all dead workers into a single data structure.
 
-TBD: The final values for gauges may or may not be lost when the process exits.
+```javascript
+// In worker bootstrapping code:
 
+['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGTERM'].forEach(sig => {
+  process.on(sig, async () => {
+    await registry.shutdown();
+    process.exit(0);
+  });
+});
 ```
-// Code example goes here
-```
 
-## Lifecycle events
+See [the example](examples/workerTest.js) for a complete rundown, including the parent process
+signalling workers to shut themselves down.
 
-The main thread can also listen for lifecycle events for its workers and inform us when
-any of them exit prematurely. This solution will still result in data loss, and telemetry artifacts,
-but will also reduce the number of collection errors and can help the Prometheus client to clean up
-metadata related to the lost worker.
+#### Space Complexity
 
-We could fix the data loss by retaining data from the previous collection interval, that would
-require a good deal of extra storage to facilitate, and therefore would be a substantial tax on
-well-behaved workers. Alternatively, we could flag some workers as problematic (example: you have
-three pools of workers, and only one tends to crash), but that is currently not supported.
-
-For now, it is recommended that you hook the unhandled exceptions in the Worker itself, then flush
-the telemetry data prior to calling `process.exit()`.
+The `shutdown()` function causes the main or the 'primary' process to aggregate all the 'sum'
+metrics from all defunct workers that ran the shutdown to completion. The space needed in the
+aggregator thread is proportional to the union of the cardinality of the stats from all of the
+defunct workers. Therefore, so long as the cardinality of statistics is relatively common across
+all workers (eg, workers do not label their own stats with threadId), then the space needed in the
+aggregator thread is less than what the most prolific worker required - since the data is stored
+as a snapshot instead of bringing forward the storage structure that underlies active Metrics.
