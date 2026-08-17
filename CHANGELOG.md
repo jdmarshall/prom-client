@@ -55,6 +55,7 @@ This release marks our first release under the Prometheus umbrella.
 - chore: Old label processing code marked as deprecated
 - Improve cluster support to allow workers to opt out
 - Abort cluster metric responses during process termination
+- perf: Stop rebuilding the label array for every rendered series, and skip shared label handling entirely for values that do not set it; 9-22% faster `metrics()` in the registry benchmarks
 
 ### Added
 

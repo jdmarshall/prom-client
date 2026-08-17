@@ -461,6 +461,51 @@ describe('Register', () => {
 		describe('Registry with default labels', () => {
 			const Registry = require('../lib/registry');
 
+			it('should not emit a label twice when a default label name is also a shared label', async () => {
+				// Histogram buckets carry the series labels as shared labels; a default
+				// label of the same name must not be emitted alongside them. `env` does
+				// not collide, so it has to survive the merge.
+				const r = new Registry(regType);
+				r.setDefaultLabels({ route: 'default-route', env: 'production' });
+
+				const histogram = new Histogram({
+					name: 'my_histogram',
+					help: 'my histogram',
+					registers: [r],
+					labelNames: ['method', 'route'],
+					buckets: [1],
+				});
+				histogram.observe({ method: 'a"b\nc\\d', route: 'actual-route' }, 0.5);
+
+				const metrics = await r.metrics();
+
+				expect(metrics.split('\n')).toContain(
+					'my_histogram_bucket{le="1",env="production",method="a\\"b\\nc\\\\d",route="actual-route"} 1',
+				);
+				expect(metrics).not.toContain('default-route');
+			});
+
+			it('should treat only an absent sharedLabels as having none', async () => {
+				// `null` still reaches Object.entries and throws, as it did before the
+				// fast path. A truthiness check would render the series without them.
+				const r = new Registry(regType);
+				const values = [{ value: 1, labels: { a: '1' }, sharedLabels: null }];
+				r.registerMetric({
+					name: 'shared_null',
+					help: 'shared_null',
+					get() {
+						return {
+							name: 'shared_null',
+							help: 'shared_null',
+							type: 'gauge',
+							values,
+						};
+					},
+				});
+
+				await expect(r.metrics()).rejects.toThrow(TypeError);
+			});
+
 			describe('mutation tests', () => {
 				describe('registry.metrics()', () => {
 					it('should not throw with default labels (counter)', async () => {
