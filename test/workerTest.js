@@ -57,6 +57,15 @@ describe.each([
 			const announcementChannel = new BroadcastChannel(
 				'@prometheus-io/client:announce',
 			).unref();
+
+			const discovery = new Promise(resolve => {
+				announcementChannel.addEventListener('message', async event => {
+					if (event.data.type === ANNOUNCEMENT && !event.data.primary) {
+						resolve(event);
+					}
+				});
+			});
+
 			const responders = [1, 2, 3].map(threadId => {
 				const name = `@prometheus-io/client:worker:${threadId}`;
 				const channel = new BroadcastChannel(name).unref();
@@ -70,7 +79,7 @@ describe.each([
 				return { threadId, channel };
 			});
 
-			await delay(5); // Let announcements arrive
+			await discovery; // Let announcements arrive
 
 			let finishSendingResponses;
 			const responsesSent = new Promise(resolve => {
