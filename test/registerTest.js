@@ -340,7 +340,36 @@ describe('Register', () => {
 			expect(escapedResult).toMatch(/\\"/);
 		});
 
-		describe('should output metrics as JSON', () => {
+		describe('getMetricsAsArray()', () => {
+			it('should return metrics', async () => {
+				register.registerMetric(getMetric());
+				const output = await register.getMetricsAsArray();
+
+				expect(output.length).toEqual(1);
+				expect(output[0].name).toEqual('test_metric');
+				expect(output[0].get).toBeInstanceOf(Function);
+			});
+
+			describe('with aggregator argument', () => {
+				it('should filter out other aggregators', async () => {
+					const max = getMetric('max_metric');
+					max.aggregator = 'max';
+					const min = getMetric('min_metric');
+					min.aggregator = 'min';
+
+					register.registerMetric(max);
+					register.registerMetric(min);
+
+					const output = await register.getMetricsAsArray('min');
+
+					expect(output.length).toEqual(1);
+					expect(output[0].name).toEqual('min_metric');
+					expect(output[0].get).toBeInstanceOf(Function);
+				});
+			});
+		});
+
+		describe('getMetricsAsJSON()', () => {
 			it('should output metrics as JSON', async () => {
 				register.registerMetric(getMetric());
 				const output = await register.getMetricsAsJSON();
