@@ -5,14 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.16.0] - 2026-08-??
 
-This release marks our first release under the Prometheus umbrella.
+This release marks our first release as a Prometheus subproject.
+
+The package is renamed from `prom-client` to `@prometheus-io/client`. Update your
+dependencies and any `require()`/`import` statements accordingly.
 
 ### Breaking
 
-- The package is renamed from `prom-client` to `@prometheus-io/client`. Update your
-  dependencies and any `require()`/`import` statements accordingly.
 - The cluster and worker thread IPC message types are renamed from `prom-client:*`
   to `@prometheus-io/client:*`. A cluster primary and its workers must therefore run
   the same major version.
