@@ -142,6 +142,16 @@ gauge.dec(); // Decrement by 1
 gauge.dec(10); // Decrement by 10
 ```
 
+Note that as of version 1.0, Gauges are not initialized to zero when created. This prevents
+recording of anomalous data.
+
+First use should look like:
+
+```js
+const gauge = new client.Gauge({ name: 'metric_name', help: 'metric_help' });
+gauge.set(10); // Set initial value
+```
+
 ##### Configuration
 
 If the gauge is used for a point-in-time observation, you should provide a
