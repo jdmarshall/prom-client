@@ -1,4 +1,6 @@
-# Prometheus client for node.js [![Actions Status](https://github.com/prometheus/client_js/workflows/Node.js%20CI/badge.svg?branch=master)](https://github.com/prometheus/client_js/actions)
+# Prometheus client for node.js
+
+[![Actions Status](https://github.com/prometheus/client_js/workflows/Node.js%20CI/badge.svg?branch=master)](https://github.com/prometheus/client_js/actions)
 
 A prometheus client for Node.js that supports histogram, summaries, gauges and
 counters.
