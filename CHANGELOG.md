@@ -12,6 +12,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Organized default metrics
+- perf: Histogram rendering builds its export list straight from the store iterator instead of an intermediate array. Faster at high series counts on Node 24 and 26, can be slightly slower on Node 22
 
 ### Added
 
