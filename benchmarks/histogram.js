@@ -14,7 +14,11 @@
 
 'use strict';
 
-const { getLabelNames, labelCombinationFactory } = require('./utils/labels');
+const {
+	getLabelNames,
+	getLabelCombinations,
+	labelCombinationFactory,
+} = require('./utils/labels');
 
 module.exports = setupHistogramSuite;
 
@@ -100,6 +104,19 @@ function setupHistogramSuite(suite) {
 		),
 		{ teardown, setup: setup(6) },
 	);
+
+	// `method` repeats `delete`, so `1 x 64` stores 63 label sets and `2 x 8` stores 56.
+	[
+		{ name: 'no labels', counts: [] },
+		{ name: '1 x 64', counts: [64] },
+		{ name: '2 x 8', counts: [8, 8] },
+		{ name: '6 x 2', counts: [2, 2, 2, 2, 2, 2] },
+	].forEach(({ name, counts }) => {
+		suite.add(`get() ${name}`, (client, { histogram }) => histogram.get(), {
+			teardown,
+			setup: observed(counts),
+		});
+	});
 }
 
 function setup(labelCount) {
@@ -112,6 +129,25 @@ function setup(labelCount) {
 			labelNames: getLabelNames(labelCount),
 			registers: [registry],
 		});
+
+		return { registry, histogram };
+	};
+}
+
+function observed(labelCounts) {
+	return client => {
+		const registry = new client.Registry();
+
+		const histogram = new client.Histogram({
+			name: 'histogram',
+			help: 'histogram',
+			labelNames: getLabelNames(labelCounts.length),
+			registers: [registry],
+		});
+
+		getLabelCombinations(labelCounts).forEach(labels =>
+			histogram.observe({ ...labels }, 1),
+		);
 
 		return { registry, histogram };
 	};
