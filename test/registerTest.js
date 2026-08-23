@@ -1034,6 +1034,33 @@ describe('Register', () => {
 					aggregator: 'first',
 				});
 			});
+
+			it('defaults to summation for snapshots without an aggregator property', () => {
+				const noAggregator = [
+					{
+						help: 'A custom metric registered via registerMetric()',
+						name: 'custom_metric_without_aggregator',
+						type: 'gauge',
+						values: [{ value: 5, labels: {} }],
+					},
+				];
+
+				const reg = Registry.aggregate([noAggregator, noAggregator], regType);
+				const metric = reg
+					.getSingleMetric('custom_metric_without_aggregator')
+					.get();
+				expect(metric.values[0].value).toEqual(10);
+			});
+
+			it('includes metrics without an aggregator when filtering by "sum"', async () => {
+				const register = new Registry();
+				register.registerMetric(getMetric());
+
+				expect(register.getMetricsAsArray('sum').length).toEqual(1);
+				const output = await register.getMetricsAsJSON('sum');
+				expect(output.length).toEqual(1);
+				expect(output[0].name).toEqual('test_metric');
+			});
 		});
 
 		function getMetric(name) {
