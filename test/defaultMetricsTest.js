@@ -115,11 +115,13 @@ describe.each([
 		});
 	});
 
-	it('should register default metric modules in alphabetical order of their metric names', () => {
+	it('should register version first, then the remaining default metric modules in alphabetical order of their metric names', () => {
 		const moduleKeys = collectDefaultMetrics.metricsList;
-		const firstNames = moduleKeys.map(
-			key => require(`../lib/metrics/${key}`).metricNames[0],
-		);
+		expect(moduleKeys[0]).toBe('version');
+
+		const firstNames = moduleKeys
+			.slice(1)
+			.map(key => require(`../lib/metrics/${key}`).metricNames[0]);
 		expect(firstNames).toEqual([...firstNames].sort());
 	});
 
