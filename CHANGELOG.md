@@ -40,6 +40,7 @@ dependencies and any `require()`/`import` statements accordingly.
 
 ### Changed
 
+- Add direct test coverage for the base metric constructor contract
 - Allow `Pushgateway` to accept a custom registry as the second constructor argument
 - Add `Registry#getMetricsAsString()` to the TypeScript definitions
 - Improve types for no labels
