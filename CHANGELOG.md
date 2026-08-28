@@ -16,6 +16,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - perf: Histogram rendering builds its export list straight from the store iterator instead of an intermediate array. Faster at high series counts on Node 24 and 26, can be slightly slower on Node 22
 - fix: Correct content type exported for cluster and worker mode.
 - perf: Remove truthy conditionals from default metric collectors
+- fix: Preserve zero-valued Counter exemplars
 
 ### Added
 
