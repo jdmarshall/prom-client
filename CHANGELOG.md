@@ -17,6 +17,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - fix: Correct content type exported for cluster and worker mode.
 - perf: Remove truthy conditionals from default metric collectors
 - fix: Preserve zero-valued Counter exemplars
+- perf: Remove object and array fallback truthiness from core metric paths
 
 ### Added
 
