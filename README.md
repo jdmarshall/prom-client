@@ -1,4 +1,4 @@
-# Prometheus client for node.js
+# <img src="images/prometheus-logo.svg" height="22px" alt="prometheus logo"/> Prometheus client for node.js
 
 [![Actions Status](https://github.com/prometheus/client_js/workflows/Node.js%20CI/badge.svg?branch=master)](https://github.com/prometheus/client_js/actions)
 
