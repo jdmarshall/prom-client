@@ -144,7 +144,8 @@ describe.each([
 					help: 'somehelp',
 				});
 
-				await expect(instance.get()).resolves.toBeEmpty;
+				const actual = await instance.get();
+				await expect(actual.values).toHaveLength(0);
 			});
 
 			describe('with labels', () => {
@@ -299,7 +300,9 @@ describe.each([
 			expect((await instance.get()).values[0].value).toEqual(12);
 
 			instance.reset();
-			expect(await instance.get()).toBeEmpty;
+
+			const values = (await instance.get()).values;
+			expect(values).toHaveLength(0);
 
 			instance.set(10);
 			expect((await instance.get()).values[0].value).toEqual(10);
